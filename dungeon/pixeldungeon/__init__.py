@@ -31,13 +31,42 @@ class _RectSplitter:
                 self.split(Rect(rect.left, rect.top, rect.right, vh), output)
                 self.split(Rect(rect.left, vh, rect.right, rect.bottom), output)
 
+
+class RoomType:
+    NULL = 0
+    STANDARD = 1
+    ENTRANCE = 2
+    EXIT = 3
+    BOSS_EXIT = 4
+    TUNNEL = 5
+    PASSAGE = 6
+    SHOP = 7
+    BLACKSMITH = 8
+    TREASURY = 9
+    ARMORY = 10
+    LIBRARY = 11
+    LABORATORY = 12
+    VAULT = 13
+    TRAPS = 14
+    STORAGE = 15
+    MAGIC_WELL = 16
+    GARDEN = 17
+    CRYPT = 18
+    STATUE = 19
+    POOL = 20
+    RAT_KING = 21
+    WEAK_FLOOR = 22
+    PIT = 23
+    ALTAR = 24
+
+
 class Room:
     def __init__(self, rect: Rect):
         self.rect = rect
         self.neighbours = []
         self.connected = {}
         self.price = 1
-        self.type = None
+        self.type = RoomType.NULL
 
     def get_neighbours(self) -> list[tuple('_NodeLike', int)]:
         return [(nb, nb.price) for nb in self.neighbours]
@@ -48,9 +77,8 @@ class Room:
         self.connected[other] = None
         other.connected[self] = None
 
-class PixelDungeonLevel(Level):
-    """生成 Pixel Dungeon 地图的算法"""
 
+class PixelDungeonLevel(Level):
     def __init__(self, width: int, height: int):
         super(PixelDungeonLevel, self).__init__(width, height)
         self.rooms = None
@@ -104,8 +132,8 @@ class PixelDungeonLevel(Level):
             # failed to find a suitable start and end room after 10 tries
             return False
         
-        room_entrance.type = 'entrance'
-        room_exit.type = 'exit'
+        room_entrance.type = RoomType.ENTRANCE
+        room_exit.type = RoomType.EXIT
 
         connected = set()
         connected.add(room_entrance)
@@ -129,10 +157,55 @@ class PixelDungeonLevel(Level):
         n_connected = int(len(self.rooms) * random.uniform(0.5, 0.7))
         connected = list(connected)
         while len(connected) < n_connected:
-            cr: Room = random.choice(connected)
-            or_: Room = random.choice(cr.neighbours)
-            if or_ not in connected:
-                cr.connect(or_)
-                connected.add(or_)
+            _0: Room = random.choice(connected)
+            _1: Room = random.choice(_0.neighbours)
+            if _1 not in connected:
+                _0.connect(_1)
+                connected.add(_1)
 
+        # assign room types
+        specials = [
+            RoomType.ARMORY, RoomType.WEAK_FLOOR, RoomType.MAGIC_WELL, RoomType.CRYPT, RoomType.POOL, RoomType.GARDEN, RoomType.LIBRARY,
+            RoomType.TREASURY, RoomType.TRAPS, RoomType.STORAGE, RoomType.STATUE, RoomType.LABORATORY, RoomType.VAULT, RoomType.ALTAR
+        ]
+        special_rooms = 0
+        for r in self.rooms:
+            if r.type == RoomType.NULL and len(r.connected) == 1:
+                if specials and r.rect.width() > 3 and r.rect.height() > 3 and random.randint(0, special_rooms * special_rooms + 2) == 0:
+                    n = len(specials)
+                    r.type = specials[min(random.randint(0, n), random.randint(0, n))]
+                    specials.remove(r.type)
+                    special_rooms += 1
+                elif random.randint(0, 1) == 0:
+                    neighbours = set()
+                    for nb in r.neighbours:
+                        if nb not in r.connected and nb.type not in specials and nb.type != RoomType.PIT:
+                            neighbours.add(nb)
+                    if len(neighbours) > 1:
+                        r.connect(random.choice(list(neighbours)))
+
+        count = 0
+        for r in self.rooms:
+            if r.type == RoomType.NULL:
+                connections = len(r.connected)
+                if connections == 0:
+                    pass
+                elif random.randint(0, connections * connections) == 0:
+                    r.type = RoomType.STANDARD
+                    count += 1
+                else:
+                    r.type = RoomType.TUNNEL
+
+        while count < 4:
+            r = random.choice(self.rooms)
+            if r.type == RoomType.TUNNEL:
+                r.type = RoomType.STANDARD
+                count += 1
+
+		# paint();
+		# paintWater();
+		# paintGrass();
+		
+		# placeTraps();
+                    
         return True
