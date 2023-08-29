@@ -19,7 +19,7 @@ class _RectSplitter:
             vh = random.randint(rect.top + 3, rect.bottom - 3)
             self.split(Rect(rect.left, rect.top, rect.right, vh), output)
             self.split(Rect(rect.left, vh, rect.right, rect.bottom), output)
-        elif (random.random() <= (self.min_size * self.min_size / rect.square()) and w <= self.max_size and h <= self.max_size) or w < self.min_size or h < self.min_size:
+        elif (random.random() <= (self.min_size * self.min_size / rect.area()) and w <= self.max_size and h <= self.max_size) or w < self.min_size or h < self.min_size:
             output.append(Rect(rect.left, rect.top, rect.right, rect.bottom))
         else:
             if random.random() < (w - 2) / (w + h - 4):
@@ -54,10 +54,14 @@ class PixelDungeonLevel(Level):
         self.rooms = [Room(rect) for rect in rects]
         del rects
 
-        # connect the rooms (not sure about this)
+        # connect the rooms by corridors
         for i in range(len(self.rooms) - 1):
             for j in range(i + 1, len(self.rooms)):
-                self.rooms[i].neighbours.append(self.rooms[j])
+                room_i, room_j = self.rooms[i], self.rooms[j]
+                rij = room_i.rect.intersect(room_j.rect)
+                if (rij.width() == 0 and rij.height() >= 3) or (rij.height() == 0 and rij.width() >= 3):
+                    room_i.neighbours.append(room_j)
+                    room_j.neighbours.append(room_i)
 
         # determine the entrance and exit rooms
         min_distance = int(math.sqrt(len(self.rooms)))
