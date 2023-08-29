@@ -17,6 +17,7 @@ class Level:
         self._visited = [False] * (self.width * self.height)
     
     def generate(self):
+        # repeatedly build until success
         while not self.build():
             self.reset()
 

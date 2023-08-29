@@ -1,4 +1,4 @@
-import random
+import random, math
 from dungeon.level import Level
 from dungeon.algorithm import Rect
 
@@ -52,9 +52,31 @@ class PixelDungeonLevel(Level):
             return False
         
         self.rooms = [Room(rect) for rect in rects]
+        del rects
 
         # connect the rooms (not sure about this)
         for i in range(len(self.rooms) - 1):
             for j in range(i + 1, len(self.rooms)):
                 self.rooms[i].neighbours.append(self.rooms[j])
+
+        # determine the entrance and exit rooms
+        min_distance = int(math.sqrt(len(self.rooms)))
+        for _ in range(10):
+            while True:
+                room_entrance = random.choice(self.rooms)
+                # make sure `room_entrance` is big enough
+                if room_entrance.width() >= 4 and room_entrance.height() >= 4:
+                    break
+            while True:
+                room_exit = random.choice(self.rooms)
+                # make sure `room_exit` is big enough and not the same as `room_entrance`
+                if room_exit is not room_entrance and room_exit.width() >= 4 and room_exit.height() >= 4:
+                    break
+            # make sure the distance between `room_entrance` and `room_exit` is big enough
+            Graph.build_distance_map(self.rooms, room_exit)
+            if room_entrance.distance() >= min_distance:
+                break
+        else:
+            # failed to find a suitable start and end room after 10 tries
+            return False
             
