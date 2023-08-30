@@ -1,7 +1,8 @@
 import random, math
 from dungeon.level import Level
-from dungeon.algorithm import dijkstra
+from dungeon.algorithm import dijkstra, _NodeLike
 from dungeon.base import Rect
+from dungeon.debug import plot_rects
 
 class _RectSplitter:
     def __init__(self, min_size: int, max_size: int):
@@ -69,7 +70,13 @@ class Room:
         self.price = 1
         self.type = RoomType.NULL
 
-    def get_neighbours(self) -> list[tuple('_NodeLike', int)]:
+    def width(self) -> int:
+        return self.rect.width()
+    
+    def height(self) -> int:
+        return self.rect.height()
+
+    def get_neighbours(self) -> list[tuple[_NodeLike, int]]:
         return [(nb, nb.price) for nb in self.neighbours]
     
     def connect(self, other: 'Room') -> None:
@@ -78,9 +85,12 @@ class Room:
         self.connected[other] = None
         other.connected[self] = None
 
+    def __lt__(self, other: 'Room') -> bool:
+        return True
+
 
 class PixelDungeonLevel(Level):
-    def __init__(self, width: int, height: int):
+    def __init__(self, width=32, height=32):
         super(PixelDungeonLevel, self).__init__(width, height)
         self.rooms = None
 
@@ -88,16 +98,42 @@ class PixelDungeonLevel(Level):
         """从 `start` 到 `end` 的贪心路径"""
         path = [start]
         while path[-1] is not end:
-            path.append(min(path[-1].neighbours, key=lambda nb: dist[nb]))
+            next = min(path[-1].neighbours, key=lambda nb: dist[nb])
+            if next in path:
+                break
+            path.append(next)
         return path
+    
+    def plot_rooms_with_dist(self, dist: dict[Room, int], filename=None):
+        labels, colors = [], []
+        for room in self.rooms:
+            labels.append(dist[room])
+            colors.append(dist[room])
+        plot_rects(
+            [room.rect for room in self.rooms],
+            self.width, self.height,
+            filename=filename,
+            labels=labels,
+            colors=colors
+        )
+
+    def plot_room_path(self, path: list[Room], filename=None):
+        dist = {}
+        for room in self.rooms:
+            dist[room] = 0
+        for i, room in enumerate(path, start=1):
+            dist[room] = i
+        self.plot_rooms_with_dist(dist, filename=filename)
 
     def build(self) -> bool:
         # split the level into rooms
         rects = []
         splitter = _RectSplitter(7, 9)
-        splitter.split(Rect(0, 0, self.width - 1, self.height - 1), rects)
+        splitter.split(Rect(0, 0, self.width, self.height), rects)
         if len(rects) < 8:
             return False
+        
+        plot_rects(rects, self.width, self.height, filename='pd_01.png')
         
         self.rooms = [Room(rect) for rect in rects]
         del rects
@@ -128,6 +164,7 @@ class PixelDungeonLevel(Level):
             # make sure the distance between `room_entrance` and `room_exit` is big enough
             dist = dijkstra(self.rooms, room_exit)
             if dist[room_entrance] >= min_distance:
+                self.plot_rooms_with_dist(dist, filename='pd_02.png')
                 break
         else:
             # failed to find a suitable start and end room after 10 tries
@@ -138,8 +175,10 @@ class PixelDungeonLevel(Level):
 
         connected = set()
         connected.add(room_entrance)
-        
+
         path = self.get_greedy_path(dist, room_entrance, room_exit)
+        self.plot_room_path(path, filename='pd_03.png')
+
         for i in range(len(path) - 1):
             path[i].connect(path[i + 1])
             connected.add(path[i + 1])
@@ -149,7 +188,10 @@ class PixelDungeonLevel(Level):
             room.price = dist[room]
 
         dist = dijkstra(self.rooms, room_exit)
-        path = self.get_greedy_path(dist, room_exit, room_entrance)
+        self.plot_rooms_with_dist(dist, filename='pd_04.png')
+
+        path = self.get_greedy_path(dist, room_entrance, room_exit)
+        self.plot_room_path(path, filename='pd_05.png')
 
         for i in range(len(path) - 1):
             path[i].connect(path[i + 1])
@@ -162,7 +204,12 @@ class PixelDungeonLevel(Level):
             _1: Room = random.choice(_0.neighbours)
             if _1 not in connected:
                 _0.connect(_1)
-                connected.add(_1)
+                connected.append(_1)
+
+        self.plot_rooms_with_dist({
+            room: 1 if room in connected else 0
+            for room in self.rooms
+        }, filename='pd_06.png')
 
         # assign room types
         specials = [
@@ -172,7 +219,7 @@ class PixelDungeonLevel(Level):
         special_rooms = 0
         for r in self.rooms:
             if r.type == RoomType.NULL and len(r.connected) == 1:
-                if specials and r.rect.width() > 3 and r.rect.height() > 3 and random.randint(0, special_rooms * special_rooms + 2) == 0:
+                if specials and r.width() > 3 and r.height() > 3 and random.randint(0, special_rooms * special_rooms + 2) == 0:
                     n = len(specials)
                     r.type = specials[min(random.randint(0, n), random.randint(0, n))]
                     specials.remove(r.type)
@@ -197,11 +244,11 @@ class PixelDungeonLevel(Level):
                 else:
                     r.type = RoomType.TUNNEL
 
-        while count < 4:
-            r = random.choice(self.rooms)
-            if r.type == RoomType.TUNNEL:
-                r.type = RoomType.STANDARD
-                count += 1
+        # while count < 4:
+        #     r = random.choice(self.rooms)
+        #     if r.type == RoomType.TUNNEL:
+        #         r.type = RoomType.STANDARD
+        #         count += 1
 
 		# paint();
 		# paintWater();

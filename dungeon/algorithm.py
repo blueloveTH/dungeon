@@ -4,7 +4,7 @@ import heapq
 
 # duck-type protocol
 class _NodeLike:
-    def get_neighbours(self) -> list[tuple('_NodeLike', int)]:
+    def get_neighbours(self) -> list[tuple['_NodeLike', int]]:
         raise NotImplementedError
 
 def dijkstra(G: list[_NodeLike], node: _NodeLike) -> dict[_NodeLike, int]:
