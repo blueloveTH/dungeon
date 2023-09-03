@@ -125,7 +125,7 @@ class PixelDungeonLevel(Level):
             dist[room] = i
         self.plot_rooms_with_dist(dist, filename=filename)
 
-    def build(self) -> bool:
+    def step_build(self) -> bool:
         # split the level into rooms
         rects = []
         splitter = _RectSplitter(7, 9)

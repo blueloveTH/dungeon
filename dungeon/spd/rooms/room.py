@@ -1,4 +1,3 @@
-from collections import OrderedDict
 from random import randint
 from dungeon.base import Rect
 
@@ -6,7 +5,7 @@ class Room(Rect):
     def __init__(self, other=None):
         super().__init__(other)
         self.neighbours = []
-        self.connected = OrderedDict()
+        self.connected = {}
         self.distance = 0
         self.price = 1
     
@@ -22,16 +21,16 @@ class Room(Rect):
             self.connected[r] = d
         return self
     
-    def minWidth(self):
+    def min_width(self):
         return -1
     
-    def maxWidth(self):
+    def max_width(self):
         return -1
     
-    def minHeight(self):
+    def min_height(self):
         return -1
     
-    def maxHeight(self):
+    def max_height(self):
         return -1
     
     def setSize(self):
